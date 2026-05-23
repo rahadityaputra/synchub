@@ -1,27 +1,21 @@
-import React, { useState } from 'react';
-import { useStore } from '../../stores/useStore';
-import { Link } from 'react-router-dom';
-import {
-  Link2,
-  Trash2,
-  Plus,
-  RefreshCw,
-  AlertTriangle
-} from 'lucide-react';
+import React, { useState } from "react";
+import { useStore } from "../../stores/useStore";
+import { Link2, Trash2, Plus, RefreshCw } from "lucide-react";
 
 function Mappings() {
-  const { mappings, products, unmappedProducts, createMapping, deleteMapping, fetchInitialData } = useStore();
+  const { mappings, products, createMapping, deleteMapping, fetchInitialData } =
+    useStore();
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  
+
   // New Mapping State
-  const [marketplace, setMarketplace] = useState('shopee');
-  const [marketplaceSku, setMarketplaceSku] = useState('');
-  const [internalSku, setInternalSku] = useState('');
+  const [marketplace, setMarketplace] = useState("shopee");
+  const [marketplaceSku, setMarketplaceSku] = useState("");
+  const [internalSku, setInternalSku] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const handleOpenCreate = () => {
-    setMarketplace('shopee');
-    setMarketplaceSku('');
+    setMarketplace("shopee");
+    setMarketplaceSku("");
     if (products.length > 0) setInternalSku(products[0].sku);
     setCreateModalOpen(true);
   };
@@ -29,14 +23,14 @@ function Mappings() {
   const handleSaveMapping = async (e) => {
     e.preventDefault();
     if (!marketplaceSku.trim() || !internalSku) {
-      alert('Semua bidang harus diisi!');
+      alert("Semua bidang harus diisi!");
       return;
     }
     setSubmitting(true);
     const success = await createMapping({
       marketplace,
       marketplace_sku: marketplaceSku.trim().toUpperCase(),
-      internal_sku: internalSku
+      internal_sku: internalSku,
     });
     if (success) {
       setCreateModalOpen(false);
@@ -45,47 +39,42 @@ function Mappings() {
   };
 
   const handleDeleteMapping = async (id) => {
-    if (window.confirm('Apakah Anda yakin ingin menghapus mapping SKU ini? Sinkronisasi stok untuk channel ini akan dihentikan.')) {
+    if (
+      window.confirm(
+        "Apakah Anda yakin ingin menghapus mapping SKU ini? Sinkronisasi stok untuk channel ini akan dihentikan.",
+      )
+    ) {
       await deleteMapping(id);
     }
   };
 
   return (
     <div className="space-y-6">
-      
       {/* 1. MAPPING MANAGEMENT CONTROLS */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 p-4 rounded-xl border border-slate-800">
-        
-        {/* Unmapped products alert banner */}
         <div className="flex items-center gap-3">
           <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400 border border-blue-500/20 shrink-0">
             <Link2 size={18} />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-white">SKU Mapping Channel</h3>
-            <p className="text-xs text-slate-400">Hubungkan SKU marketplace dengan SKU gudang utama</p>
+            <h3 className="text-sm font-semibold text-white">
+              SKU Mapping Channel
+            </h3>
+            <p className="text-xs text-slate-400">
+              Hubungkan SKU marketplace dengan SKU gudang utama
+            </p>
           </div>
         </div>
 
         {/* Buttons */}
         <div className="flex items-center gap-2">
-          {unmappedProducts.length > 0 && (
-            <Link
-              to="/unmapped-products"
-              className="flex items-center gap-1.5 bg-red-600/10 hover:bg-red-600/20 text-red-400 hover:text-red-300 border border-red-500/20 text-xs font-bold py-2 px-3 rounded-lg transition-all"
-            >
-              <AlertTriangle size={14} className="animate-pulse" />
-              {unmappedProducts.length} Produk Unmapped
-            </Link>
-          )}
-          
           <button
             onClick={handleOpenCreate}
             className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-2 px-3 rounded-lg shadow-lg shadow-blue-900/20 transition-all"
           >
             <Plus size={14} /> Tambah Mappings
           </button>
-          
+
           <button
             onClick={fetchInitialData}
             className="p-2 border border-slate-800 bg-slate-950 hover:bg-slate-900 text-slate-400 hover:text-slate-200 rounded-lg transition-all"
@@ -94,7 +83,6 @@ function Mappings() {
             <RefreshCw size={16} />
           </button>
         </div>
-
       </div>
 
       {/* 2. MAPPING TABLE */}
@@ -114,19 +102,36 @@ function Mappings() {
             <tbody className="divide-y divide-slate-800/60">
               {mappings.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="text-center py-10 text-slate-500 font-medium">
-                    Tidak ada SKU mapping ditemukan. Klik "Tambah Mappings" untuk menghubungkan.
+                  <td
+                    colSpan="6"
+                    className="text-center py-10 text-slate-500 font-medium"
+                  >
+                    Tidak ada SKU mapping ditemukan. Klik "Tambah Mappings"
+                    untuk menghubungkan.
                   </td>
                 </tr>
               ) : (
                 mappings.map((m) => {
-                  const linkedProduct = products.find(p => p.sku === m.internal_sku);
+                  const linkedProduct = products.find(
+                    (p) => p.sku === m.internal_sku,
+                  );
                   return (
-                    <tr key={m.id} className="hover:bg-slate-900/30 transition-colors">
-                      <td className="px-6 py-4 font-semibold text-slate-300 capitalize">{m.marketplace}</td>
-                      <td className="px-6 py-4 font-mono font-bold text-white">{m.marketplace_sku}</td>
-                      <td className="px-6 py-4 font-mono font-bold text-blue-400">{m.internal_sku}</td>
-                      <td className="px-6 py-4 text-slate-300 font-medium">{linkedProduct ? linkedProduct.name : 'Unknown Product'}</td>
+                    <tr
+                      key={m.id}
+                      className="hover:bg-slate-900/30 transition-colors"
+                    >
+                      <td className="px-6 py-4 font-semibold text-slate-300 capitalize">
+                        {m.marketplace}
+                      </td>
+                      <td className="px-6 py-4 font-mono font-bold text-white">
+                        {m.marketplace_sku}
+                      </td>
+                      <td className="px-6 py-4 font-mono font-bold text-blue-400">
+                        {m.internal_sku}
+                      </td>
+                      <td className="px-6 py-4 text-slate-300 font-medium">
+                        {linkedProduct ? linkedProduct.name : "Unknown Product"}
+                      </td>
                       <td className="px-6 py-4 text-center">
                         <span className="bg-emerald-500/10 text-emerald-400 text-[10px] px-2 py-0.5 rounded border border-emerald-500/20 font-bold">
                           SYNC ACTIVE
@@ -155,19 +160,23 @@ function Mappings() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
             <div className="px-5 py-4 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
-              <span className="font-bold text-white text-sm">Hubungkan SKU Baru</span>
-              <button 
-                onClick={() => setCreateModalOpen(false)} 
+              <span className="font-bold text-white text-sm">
+                Hubungkan SKU Baru
+              </span>
+              <button
+                onClick={() => setCreateModalOpen(false)}
                 className="text-slate-400 hover:text-white text-sm"
               >
                 Tutup
               </button>
             </div>
-            
+
             <form onSubmit={handleSaveMapping} className="p-5 space-y-4">
               {/* Marketplace Selector */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-400">Pilih Marketplace</label>
+                <label className="text-xs font-semibold text-slate-400">
+                  Pilih Marketplace
+                </label>
                 <select
                   value={marketplace}
                   onChange={(e) => setMarketplace(e.target.value)}
@@ -181,7 +190,9 @@ function Mappings() {
 
               {/* Marketplace SKU Input */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-400">Marketplace SKU</label>
+                <label className="text-xs font-semibold text-slate-400">
+                  Marketplace SKU
+                </label>
                 <input
                   type="text"
                   placeholder="Contoh: SHP-ELEC-001"
@@ -194,7 +205,9 @@ function Mappings() {
 
               {/* Internal SKU Selector */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-400">Internal SKU (Gudang)</label>
+                <label className="text-xs font-semibold text-slate-400">
+                  Internal SKU (Gudang)
+                </label>
                 <select
                   value={internalSku}
                   onChange={(e) => setInternalSku(e.target.value)}
@@ -220,13 +233,14 @@ function Mappings() {
               >
                 {submitting ? (
                   <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                ) : 'Buat Koneksi Mappings'}
+                ) : (
+                  "Buat Koneksi Mappings"
+                )}
               </button>
             </form>
           </div>
         </div>
       )}
-
     </div>
   );
 }

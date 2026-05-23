@@ -16,7 +16,6 @@ import Dashboard from "./pages/dashboard/Dashboard";
 import Products from "./pages/products/Products";
 import ProductDetail from "./pages/products/ProductDetail";
 import Mappings from "./pages/mappings/Mappings";
-import UnmappedProducts from "./pages/mappings/UnmappedProducts";
 import Orders from "./pages/orders/Orders";
 import OrderDetail from "./pages/orders/OrderDetail";
 import SyncLogs from "./pages/sync-logs/SyncLogs";
@@ -65,7 +64,6 @@ function App() {
           <Route path="products" element={<Products />} />
           <Route path="products/:id" element={<ProductDetail />} />
           <Route path="mappings" element={<Mappings />} />
-          <Route path="unmapped-products" element={<UnmappedProducts />} />
           <Route path="orders" element={<Orders />} />
           <Route path="orders/:id" element={<OrderDetail />} />
           <Route path="sync-logs" element={<SyncLogs />} />

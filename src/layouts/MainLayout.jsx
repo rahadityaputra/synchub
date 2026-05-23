@@ -18,19 +18,10 @@ import {
   Play,
   Menu,
   X,
-  Layers,
-  AlertTriangle,
-  Settings,
 } from "lucide-react";
 
 function MainLayout() {
-  const {
-    socketConnected,
-    notifications,
-    activityFeed,
-    unmappedProducts,
-    products,
-  } = useStore();
+  const { socketConnected, notifications, activityFeed, products } = useStore();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [simulatorOpen, setSimulatorOpen] = useState(false);
 
@@ -50,7 +41,6 @@ function MainLayout() {
       name: "SKU Mappings",
       path: "/mappings",
       icon: Link2,
-      badge: unmappedProducts.length > 0 ? unmappedProducts.length : null,
     },
     { name: "Orders", path: "/orders", icon: ShoppingCart },
     { name: "Sync Logs", path: "/sync-logs", icon: History },
@@ -275,11 +265,6 @@ function MainLayout() {
                   />
                   {sidebarOpen && <span className="truncate">{item.name}</span>}
                 </div>
-                {sidebarOpen && item.badge && (
-                  <span className="bg-red-500/10 text-red-400 text-xs px-2 py-0.5 rounded-full font-bold border border-red-500/20">
-                    {item.badge}
-                  </span>
-                )}
               </Link>
             );
           })}

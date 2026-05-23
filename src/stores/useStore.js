@@ -23,7 +23,6 @@ export const useStore = create((set, get) => ({
     marketplaces: [],
     products: [],
     mappings: [],
-    unmappedProducts: [],
     orders: [],
     syncLogs: [],
     payloadLogs: [],
@@ -43,7 +42,6 @@ export const useStore = create((set, get) => ({
                 marketsRes,
                 productsRes,
                 mappingsRes,
-                unmappedRes,
                 ordersRes,
                 syncRes,
                 payloadRes,
@@ -52,7 +50,6 @@ export const useStore = create((set, get) => ({
                 api.get("/marketplaces"),
                 api.get("/products"),
                 api.get("/mappings"),
-                api.get("/unmapped-products"),
                 api.get("/orders"),
                 api.get("/sync-logs"),
                 api.get("/payload-logs"),
@@ -63,7 +60,6 @@ export const useStore = create((set, get) => ({
                 marketplaces: marketsRes.data.data,
                 products: normalizeProductList(productsRes.data.data),
                 mappings: mappingsRes.data.data,
-                unmappedProducts: unmappedRes.data.data,
                 orders: ordersRes.data.data,
                 syncLogs: syncRes.data.data,
                 payloadLogs: payloadRes.data.data,
@@ -222,28 +218,6 @@ export const useStore = create((set, get) => ({
             get().addNotification(
                 "error",
                 `Gagal menghapus mapping: ${err.message}`,
-            );
-            return false;
-        }
-    },
-
-    resolveUnmapped: async (id, internal_sku) => {
-        try {
-            const res = await api.post(`/unmapped-products/${id}/resolve`, {
-                internal_sku,
-            });
-            // Refresh data
-            get().fetchInitialData();
-            get().addNotification(
-                "success",
-                `Produk unmapped berhasil disambungkan ke SKU ${internal_sku}`,
-            );
-            return res.data.success;
-        } catch (err) {
-            console.error("Error resolving unmapped:", err);
-            get().addNotification(
-                "error",
-                `Gagal menghubungkan produk: ${err.message}`,
             );
             return false;
         }
