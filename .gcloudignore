@@ -1,0 +1,11 @@
+node_modules/
+.git/
+.github/
+.vscode/
+.idea/
+*.log
+.env
+*.md
+src/
+public/
+*.js.map

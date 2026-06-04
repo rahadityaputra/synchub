@@ -1,0 +1,13 @@
+# app.yaml untuk aplikasi dashboard-admin-tcc
+runtime: python312  # Gunakan runtime Python yang masih didukung
+
+service: admin     # Nama service yang unik
+
+handlers:
+- url: /
+  static_files: dist/index.html
+  upload: dist/index.html
+
+- url: /(.*)
+  static_files: dist/\1
+  upload: dist/(.*)
