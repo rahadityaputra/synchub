@@ -1,13 +1,20 @@
 # app.yaml untuk aplikasi dashboard-admin-tcc
-runtime: python312  # Gunakan runtime Python yang masih didukung
+runtime: python312
 
-service: admin     # Nama service yang unik
+service: admin
 
 handlers:
-- url: /
-  static_files: dist/index.html
-  upload: dist/index.html
+  # 1. Layani static assets (JS, CSS, images, fonts, dll.)
+  - url: /assets/(.*)
+    static_files: dist/assets/\1
+    upload: dist/assets/(.*)
 
-- url: /(.*)
-  static_files: dist/\1
-  upload: dist/(.*)
+  # 2. Layani file statis lain di root dist/ (favicon, manifest, dll.)
+  - url: /(.+\..+)
+    static_files: dist/\1
+    upload: dist/(.+\..+)
+
+  # 3. Semua route lainnya → fallback ke index.html (React Router / client-side routing)
+  - url: /.*
+    static_files: dist/index.html
+    upload: dist/index.html
