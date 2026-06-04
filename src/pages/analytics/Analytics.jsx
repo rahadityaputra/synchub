@@ -1,16 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useStore } from "../../stores/useStore";
 import {
-  TrendingUp,
   ShoppingCart,
   DollarSign,
   MonitorPlay,
   ArrowUpRight,
-  TrendingDown,
   Percent,
-  Calendar,
-  Layers,
-  ShoppingBag,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -26,15 +21,13 @@ import {
   Bar,
   CartesianGrid,
   Legend,
-  LineChart,
-  Line,
 } from "recharts";
 import api from "../../lib/api";
 
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b"];
 
 function Analytics() {
-  const { orders, marketplaces, queues } = useStore();
+  const { orders, queues, marketplaces } = useStore(); // used to trigger refetch on real-time updates
   const [chartData, setChartData] = useState({
     dailySales: [],
     comparison: [],
@@ -42,26 +35,41 @@ function Analytics() {
   const [topProducts, setTopProducts] = useState([]);
   const [timeRange, setTimeRange] = useState("7d");
 
+  const [summaryData, setSummaryData] = useState({
+    total_orders: 0,
+    total_revenue: 0,
+    active_marketplaces: 0,
+    average_order_value: 0
+  });
+
   useEffect(() => {
+    // Fetch sales chart data
     api
-      .get("/analytics/sales")
-      .then((res) => setChartData(res.data.data))
+      .get(`/analytics/sales?range=${timeRange}`)
+      .then((res) => setChartData({
+        dailySales: res.data?.data?.dailySales || [],
+        comparison: res.data?.data?.comparison || [],
+      }))
       .catch((err) => console.error(err));
 
+    // Fetch top products
     api
-      .get("/analytics/top-products")
-      .then((res) => setTopProducts(res.data.data))
+      .get(`/analytics/top-products?range=${timeRange}`)
+      .then((res) => setTopProducts(Array.isArray(res.data?.data) ? res.data.data : []))
       .catch((err) => console.error(err));
-  }, [orders, queues]);
+      
+    // Fetch summary metrics
+    api
+      .get(`/analytics/summary?range=${timeRange}`)
+      .then((res) => {
+        if (res.data?.data) {
+          setSummaryData(res.data.data);
+        }
+      })
+      .catch((err) => console.error(err));
+  }, [orders, queues, timeRange]);
 
-  const totalOrders = orders.length + 37;
-  const totalRevenue =
-    orders.reduce((sum, o) => sum + (o.totalPrice || 0), 0) + 45000000;
-  const activeMarketplaces = marketplaces.filter(
-    (m) => m.status === "ACTIVE",
-  ).length;
-  const averageOrderValue =
-    totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
+  const { total_orders: totalOrders, total_revenue: totalRevenue, active_marketplaces: activeMarketplaces, average_order_value: averageOrderValue } = summaryData;
 
   const formatRupiah = (val) => {
     return new Intl.NumberFormat("id-ID", {
@@ -90,8 +98,7 @@ function Analytics() {
           </button>
           <button
             onClick={() => setTimeRange("30d")}
-            className={`px-3 py-1 rounded-md font-medium transition-all cursor-not-allowed opacity-50 ${timeRange === "30d" ? "bg-blue-600 text-white font-bold" : "text-slate-400"}`}
-            disabled
+            className={`px-3 py-1 rounded-md font-medium transition-all ${timeRange === "30d" ? "bg-blue-600 text-white font-bold" : "text-slate-400 hover:text-slate-200"}`}
           >
             30 Hari
           </button>

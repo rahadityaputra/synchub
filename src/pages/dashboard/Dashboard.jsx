@@ -28,47 +28,65 @@ import api from "../../lib/api";
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b"];
 
 function Dashboard() {
-  const { orders, marketplaces, queues, syncLogs, activityFeed } = useStore();
+  const { orders, queues, syncLogs, activityFeed, marketplaces } = useStore();
   const [chartData, setChartData] = useState({
     dailySales: [],
     comparison: [],
   });
   const [topProducts, setTopProducts] = useState([]);
 
-  // Fetch chart data on load
+  const [summaryData, setSummaryData] = useState({
+    total_orders: 0,
+    total_revenue: 0,
+    active_marketplaces: 0,
+    failed_sync_count: 0
+  });
+  const [liveActivities, setLiveActivities] = useState([]);
+
   useEffect(() => {
     api
-      .get("/analytics/sales")
+      .get("/analytics/sales?range=7d")
       .then((res) => {
         const nextData = res.data?.data;
-
         setChartData({
-          dailySales: Array.isArray(nextData?.dailySales)
-            ? nextData.dailySales
-            : [],
-          comparison: Array.isArray(nextData?.comparison)
-            ? nextData.comparison
-            : [],
+          dailySales: Array.isArray(nextData?.dailySales) ? nextData.dailySales : [],
+          comparison: Array.isArray(nextData?.comparison) ? nextData.comparison : [],
         });
       })
       .catch((err) => console.error(err));
 
     api
-      .get("/analytics/top-products")
+      .get("/analytics/top-products?range=7d")
       .then((res) => {
         setTopProducts(Array.isArray(res.data?.data) ? res.data.data : []);
       })
       .catch((err) => console.error(err));
-  }, [orders, queues]); // update charts when orders or queues change
 
-  // Computations
-  const totalOrders = orders.length + 37; // base seed + live
-  const totalRevenue =
-    orders.reduce((sum, o) => sum + (o.totalPrice || 0), 0) + 45000000; // base seed + live
-  const activeMarketplaces = marketplaces.filter(
-    (m) => m.status === "ACTIVE",
-  ).length;
-  const failedSyncCount = syncLogs.filter((l) => l.status === "FAILED").length;
+    api
+      .get("/analytics/summary?range=7d")
+      .then((res) => {
+        if (res.data?.data) {
+          setSummaryData(res.data.data);
+        }
+      })
+      .catch((err) => console.error(err));
+
+    api
+      .get("/analytics/activities?range=7d")
+      .then((res) => {
+        setLiveActivities(Array.isArray(res.data?.data) ? res.data.data : []);
+      })
+      .catch((err) => console.error(err));
+  }, [orders, queues, syncLogs]); // update charts when global state changes
+
+  const { 
+    total_orders: totalOrders, 
+    total_revenue: totalRevenue, 
+    active_marketplaces: activeMarketplaces, 
+    failed_sync_count: failedSyncCount,
+    orders_growth: ordersGrowth = 0,
+    revenue_growth: revenueGrowth = 0
+  } = summaryData;
 
   const formatRupiah = (val) => {
     return new Intl.NumberFormat("id-ID", {
@@ -76,6 +94,27 @@ function Dashboard() {
       currency: "IDR",
       minimumFractionDigits: 0,
     }).format(val);
+  };
+
+  const renderGrowth = (growth) => {
+    if (growth > 0) {
+      return (
+        <span className="text-emerald-400 text-xs font-bold flex items-center">
+          +{growth}% <ArrowUpRight size={12} className="ml-0.5" />
+        </span>
+      );
+    } else if (growth < 0) {
+      return (
+        <span className="text-red-400 text-xs font-bold flex items-center">
+          {growth}% <ArrowUpRight size={12} className="ml-0.5 transform rotate-90" />
+        </span>
+      );
+    }
+    return (
+      <span className="text-slate-400 text-xs font-bold flex items-center">
+        0%
+      </span>
+    );
   };
 
   return (
@@ -92,9 +131,7 @@ function Dashboard() {
               <span className="text-2xl font-bold text-white">
                 {totalOrders}
               </span>
-              <span className="text-emerald-400 text-xs font-bold flex items-center">
-                +12% <ArrowUpRight size={12} />
-              </span>
+              {renderGrowth(ordersGrowth)}
             </div>
           </div>
           <div className="p-3 bg-blue-500/10 rounded-lg text-blue-400 border border-blue-500/20">
@@ -112,6 +149,7 @@ function Dashboard() {
               <span className="text-xl font-bold text-white">
                 {formatRupiah(totalRevenue)}
               </span>
+              {renderGrowth(revenueGrowth)}
             </div>
           </div>
           <div className="p-3 bg-emerald-500/10 rounded-lg text-emerald-400 border border-emerald-500/20">
@@ -316,46 +354,62 @@ function Dashboard() {
           </div>
 
           <div className="flex-1 overflow-y-auto pr-2 space-y-3">
-            {activityFeed.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-slate-500 py-10">
-                <Clock size={32} className="opacity-30 mb-2" />
-                <span className="text-xs">Menunggu aktivitas masuk...</span>
-                <span className="text-[10px] text-slate-600 mt-1">
-                  Gunakan ORDER SIMULATOR untuk memicu webhook!
-                </span>
-              </div>
-            ) : (
-              activityFeed.map((activity) => (
-                <div
-                  key={activity.id}
-                  className="flex items-start gap-3 p-3 rounded-lg bg-slate-900/50 border border-slate-800/80 hover:border-slate-800 transition-all text-xs"
-                >
-                  <span className="text-base shrink-0 mt-0.5">
-                    {activity.type === "queue_success"
-                      ? "✅"
-                      : activity.type === "queue_failed"
-                        ? "❌"
-                        : activity.type === "new-order" ||
-                            activity.type === "order_created"
-                          ? "🔔"
-                          : activity.type === "stock_updated" ||
-                              activity.type === "stock_manual_update"
-                            ? "📦"
-                            : activity.type === "queue_processing"
-                              ? "⚙️"
-                              : "⚙️"}
+            {(() => {
+              // Merge: real-time WS feed on top, then historical API activities
+              const wsIds = new Set(activityFeed.map((a) => a.id));
+              const merged = [
+                ...activityFeed,
+                ...liveActivities.filter((a) => !wsIds.has(a.id))
+              ];
+              const getEmoji = (type) => {
+                if (type === 'queue_success' || type === 'update-stock') return '✅';
+                if (type === 'queue_failed') return '❌';
+                if (type === 'new-order' || type === 'order_created' || type === 'enqueue-stock-sync') return '🔔';
+                if (type === 'stock_updated' || type === 'stock_manual_update') return '📦';
+                if (type === 'queue_processing') return '⚙️';
+                return '⚙️';
+              };
+              return merged.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-slate-500 py-10">
+                  <Clock size={32} className="opacity-30 mb-2" />
+                  <span className="text-xs">Menunggu aktivitas masuk...</span>
+                  <span className="text-[10px] text-slate-600 mt-1">
+                    Gunakan ORDER SIMULATOR untuk memicu webhook!
                   </span>
-                  <div className="flex-1 space-y-1">
-                    <p className="text-slate-200 leading-normal font-semibold">
-                      {activity.message}
-                    </p>
-                    <span className="text-[10px] text-slate-500 font-mono block">
-                      {new Date(activity.timestamp).toLocaleTimeString()}
-                    </span>
-                  </div>
                 </div>
-              ))
-            )}
+              ) : (
+                merged.map((activity) => (
+                  <div
+                    key={activity.id}
+                    className="flex items-start gap-3 p-3 rounded-lg bg-slate-900/50 border border-slate-800/80 hover:border-slate-800 transition-all text-xs"
+                  >
+                    <span className="text-base shrink-0 mt-0.5">{getEmoji(activity.type)}</span>
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-slate-200 leading-normal font-semibold">{activity.message}</p>
+                        {activity.status && (
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${
+                            activity.status === 'SUCCESS' || activity.status === 'PENDING'
+                              ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
+                              : activity.status === 'FAILED'
+                              ? 'bg-red-500/15 text-red-400 border border-red-500/20'
+                              : 'bg-slate-700/50 text-slate-400 border border-slate-700'
+                          }`}>{activity.status}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {activity.marketplace && (
+                          <span className="text-[10px] text-blue-400 font-mono">{activity.marketplace}</span>
+                        )}
+                        <span className="text-[10px] text-slate-500 font-mono">
+                          {new Date(activity.timestamp).toLocaleTimeString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              );
+            })()}
           </div>
         </div>
 

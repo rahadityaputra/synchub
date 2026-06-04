@@ -6,6 +6,7 @@ import {
   Navigate,
 } from "react-router-dom";
 import { useStore } from "./stores/useStore";
+import { useAuth } from "./stores/useAuth";
 
 // Layout
 import MainLayout from "./layouts/MainLayout";
@@ -14,6 +15,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 // Pages
 import Dashboard from "./pages/dashboard/Dashboard";
 import Products from "./pages/products/Products";
+import ProductForm from "./pages/products/ProductForm";
 import ProductDetail from "./pages/products/ProductDetail";
 import Mappings from "./pages/mappings/Mappings";
 import Orders from "./pages/orders/Orders";
@@ -28,11 +30,9 @@ import Register from "./pages/auth/Register";
 
 function App() {
   const { initSocket, disconnectSocket, fetchInitialData } = useStore();
+  const token = useAuth((state) => state.token);
 
   useEffect(() => {
-    // Fetch initial state
-    fetchInitialData();
-
     // Establish Socket.IO connections
     initSocket();
 
@@ -40,6 +40,12 @@ function App() {
       disconnectSocket();
     };
   }, [initSocket, disconnectSocket, fetchInitialData]);
+
+  useEffect(() => {
+    if (!token) return;
+
+    fetchInitialData();
+  }, [fetchInitialData, token]);
 
   return (
     <Router>
@@ -62,7 +68,9 @@ function App() {
           {/* Main Pages */}
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="products" element={<Products />} />
+          <Route path="products/create" element={<ProductForm />} />
           <Route path="products/:id" element={<ProductDetail />} />
+          <Route path="products/:id/edit" element={<ProductForm />} />
           <Route path="mappings" element={<Mappings />} />
           <Route path="orders" element={<Orders />} />
           <Route path="orders/:id" element={<OrderDetail />} />
@@ -70,7 +78,7 @@ function App() {
           <Route path="payload-logs" element={<PayloadLogs />} />
           <Route path="queues" element={<Queues />} />
           <Route path="analytics" element={<Analytics />} />
-          <Route path="marketplaces" element={<Marketplaces />} />
+          {/* <Route path="marketplaces" element={<Marketplaces />} /> */}
         </Route>
       </Routes>
     </Router>

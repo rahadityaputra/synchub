@@ -22,16 +22,17 @@ function Queues() {
   const [retryLoadingId, setRetryLoadingId] = useState(null);
 
   // Computations
+  const safeQueues = Array.isArray(queues) ? queues : [];
   const stats = {
-    total: queues.length,
-    pending: queues.filter(q => q.status === 'PENDING').length,
-    processing: queues.filter(q => q.status === 'PROCESSING').length,
-    success: queues.filter(q => q.status === 'SUCCESS').length,
-    failed: queues.filter(q => q.status === 'FAILED').length,
+    total: safeQueues.length,
+    pending: safeQueues.filter(q => q.status === 'PENDING').length,
+    processing: safeQueues.filter(q => q.status === 'PROCESSING').length,
+    success: safeQueues.filter(q => q.status === 'SUCCESS').length,
+    failed: safeQueues.filter(q => q.status === 'FAILED').length,
   };
 
   // Filter and search
-  const filteredJobs = queues
+  const filteredJobs = safeQueues
     .filter(job => {
       const matchStatus = statusFilter === 'ALL' || job.status === statusFilter;
       const jsonStr = JSON.stringify(job).toLowerCase();

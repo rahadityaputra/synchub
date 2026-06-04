@@ -2,19 +2,149 @@ import { create } from "zustand";
 import api from "../lib/api";
 import { io } from "socket.io-client";
 
-const SOCKET_URL = "http://localhost:3000";
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL ?? "http://localhost:3000";
 
 const normalizeProduct = (product) => {
     if (!product) return product;
 
+    const images = Array.isArray(product.images)
+        ? product.images
+        : Array.isArray(product.imageUrls)
+          ? product.imageUrls
+          : Array.isArray(product.media)
+            ? product.media
+            : [];
+
     return {
         ...product,
+        internalSku:
+            product.internalSku || product.internal_sku || product.sku || "",
         sku: product.sku || product.internalSku || product.internal_sku || "",
+        description: product.description || "",
+        category: product.category || "",
+        brand: product.brand || "",
+        price: Number(product.price ?? 0),
+        stock: Number(product.stock ?? 0),
+        weight: Number(product.weight ?? 0),
+        status: product.status || "ACTIVE",
+        images,
+        thumbnail: images[0] || product.thumbnail || "",
+        createdAt: product.createdAt || product.created_at || null,
+        updatedAt: product.updatedAt || product.updated_at || null,
+    };
+};
+
+const normalizeProductDetail = (detail) => {
+    if (!detail) return detail;
+
+    // Backend may return product as nested { product: {...}, mappings: [...] }
+    // or as a flat object { id, name, marketplaceMappings: [...], ... }
+    const productData = detail.product || detail;
+
+    // Support both field names: mappings / marketplaceMappings
+    const rawMappings =
+        detail.mappings ||
+        detail.marketplaceMappings ||
+        detail.product?.mappings ||
+        detail.product?.marketplaceMappings ||
+        [];
+
+    return {
+        ...detail,
+        product: normalizeProduct(productData),
+        mappings: normalizeMappingList(rawMappings),
+        orderHistory: Array.isArray(detail.orderHistory) ? detail.orderHistory : [],
+        syncHistory: Array.isArray(detail.syncHistory) ? detail.syncHistory : [],
+        activityLogs: Array.isArray(detail.activityLogs) ? detail.activityLogs : [],
     };
 };
 
 const normalizeProductList = (products) =>
     Array.isArray(products) ? products.map(normalizeProduct) : [];
+
+const normalizeMapping = (mapping) => {
+    if (!mapping) return mapping;
+
+    return {
+        ...mapping,
+        marketplace: mapping.marketplace || "",
+        marketplaceSku: mapping.marketplaceSku || mapping.marketplace_sku || "",
+        marketplace_sku:
+            mapping.marketplace_sku || mapping.marketplaceSku || "",
+        internalSku: mapping.internalSku || mapping.internal_sku || "",
+        internal_sku: mapping.internal_sku || mapping.internalSku || "",
+        productId: mapping.productId || mapping.product_id || null,
+        product_id: mapping.product_id || mapping.productId || null,
+        marketplaceProductId:
+            mapping.marketplaceProductId ||
+            mapping.marketplace_product_id ||
+            null,
+        marketplace_product_id:
+            mapping.marketplace_product_id ||
+            mapping.marketplaceProductId ||
+            null,
+        createdAt: mapping.createdAt || mapping.created_at || null,
+        created_at: mapping.created_at || mapping.createdAt || null,
+        updatedAt: mapping.updatedAt || mapping.updated_at || null,
+        updated_at: mapping.updated_at || mapping.updatedAt || null,
+    };
+};
+
+const normalizeMappingList = (mappings) =>
+    Array.isArray(mappings) ? mappings.map(normalizeMapping) : [];
+
+const normalizeSyncLog = (log) => {
+    if (!log) return log;
+
+    const requestPayload = log.requestPayload || {};
+    const responsePayload = log.responsePayload || {};
+
+    return {
+        ...log,
+        productId: log.productId || log.product_id || null,
+        marketplace: log.marketplace || requestPayload.marketplace || "",
+        action: log.action || "",
+        requestPayload,
+        responsePayload,
+        sku:
+            log.sku ||
+            requestPayload.marketplace_sku ||
+            requestPayload.marketplaceSku ||
+            responsePayload.marketplace_sku ||
+            responsePayload.marketplaceSku ||
+            "",
+        internalSku:
+            log.internalSku ||
+            log.internal_sku ||
+            requestPayload.internal_sku ||
+            requestPayload.internalSku ||
+            responsePayload.internal_sku ||
+            responsePayload.internalSku ||
+            "",
+        internal_sku:
+            log.internal_sku ||
+            log.internalSku ||
+            requestPayload.internal_sku ||
+            requestPayload.internalSku ||
+            responsePayload.internal_sku ||
+            responsePayload.internalSku ||
+            "",
+        status: log.status || "PENDING",
+        error: log.error || log.errorMessage || null,
+        errorMessage: log.errorMessage || log.error || null,
+        timestamp:
+            log.timestamp ||
+            log.createdAt ||
+            log.created_at ||
+            responsePayload.updatedAt ||
+            null,
+        createdAt: log.createdAt || log.created_at || null,
+        updatedAt: log.updatedAt || log.updated_at || null,
+    };
+};
+
+const normalizeSyncLogList = (logs) =>
+    Array.isArray(logs) ? logs.map(normalizeSyncLog) : [];
 
 export const useStore = create((set, get) => ({
     // State variables
@@ -55,15 +185,23 @@ export const useStore = create((set, get) => ({
                 api.get("/payload-logs"),
                 api.get("/queues"),
             ]);
-
+            console.log("Initial data fetched:", {
+                marketplaces: marketsRes.data?.data,
+                products: productsRes.data?.data,
+                mappings: mappingsRes.data?.data,
+                orders: ordersRes.data?.data,
+                syncLogs: syncRes.data?.data?.[0],
+                payloadLogs: payloadRes.data?.data,
+                queues: queuesRes.data?.data,
+            });
             set({
-                marketplaces: marketsRes.data.data,
-                products: normalizeProductList(productsRes.data.data),
-                mappings: mappingsRes.data.data,
-                orders: ordersRes.data.data,
-                syncLogs: syncRes.data.data,
-                payloadLogs: payloadRes.data.data,
-                queues: queuesRes.data.data,
+                marketplaces: marketsRes.data?.data || [],
+                products: normalizeProductList(productsRes.data?.data),
+                mappings: normalizeMappingList(mappingsRes.data?.data),
+                orders: ordersRes.data?.data || [],
+                syncLogs: normalizeSyncLogList(syncRes.data?.data),
+                payloadLogs: payloadRes.data?.data || [],
+                queues: Array.isArray(queuesRes.data?.data) ? queuesRes.data.data : (Array.isArray(queuesRes.data) ? queuesRes.data : []),
                 loading: false,
             });
         } catch (err) {
@@ -79,20 +217,50 @@ export const useStore = create((set, get) => ({
     fetchProductDetail: async (id) => {
         try {
             const res = await api.get(`/products/${id}`);
-            const detail = res.data.data;
+            const detail = normalizeProductDetail(res.data.data);
 
-            set({
-                currentProduct: detail
-                    ? {
-                          ...detail,
-                          product: normalizeProduct(detail.product),
-                      }
-                    : detail,
-            });
+            set({ currentProduct: detail });
             return detail;
         } catch (err) {
             console.error("Error fetching product detail:", err);
             return null;
+        }
+    },
+
+    uploadProductImages: async (files, onProgress) => {
+        try {
+            const formData = new FormData();
+
+            files.forEach((file) => {
+                formData.append("images", file);
+            });
+
+            const res = await api.post("/products/upload", formData, {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                },
+                onUploadProgress: (event) => {
+                    if (!onProgress || !event.total) return;
+
+                    const progress = Math.round(
+                        (event.loaded * 100) / event.total,
+                    );
+                    onProgress(progress);
+                },
+            });
+
+            return Array.isArray(res.data?.images)
+                ? res.data.images
+                : Array.isArray(res.data?.data?.images)
+                  ? res.data.data.images
+                  : [];
+        } catch (err) {
+            console.error("Error uploading product images:", err);
+            get().addNotification(
+                "error",
+                `Gagal mengunggah gambar: ${err.response?.data?.message || err.message}`,
+            );
+            return [];
         }
     },
 
@@ -122,13 +290,66 @@ export const useStore = create((set, get) => ({
         }
     },
 
+    updateProduct: async (id, productData) => {
+        try {
+            const res = await api.patch(`/products/${id}`, productData);
+            const updatedProduct = normalizeProduct(
+                res.data.data?.product || res.data.data || productData,
+            );
+
+            set((state) => ({
+                products: state.products.map((product) =>
+                    product.id === updatedProduct.id || product.id === id
+                        ? { ...product, ...updatedProduct }
+                        : product,
+                ),
+                currentProduct:
+                    state.currentProduct?.product?.id === updatedProduct.id ||
+                    state.currentProduct?.product?.id === id
+                        ? {
+                              ...state.currentProduct,
+                              product: {
+                                  ...state.currentProduct.product,
+                                  ...updatedProduct,
+                              },
+                          }
+                        : state.currentProduct,
+            }));
+
+            get().addNotification(
+                "success",
+                `Produk diperbarui: ${updatedProduct.name}`,
+            );
+            return updatedProduct;
+        } catch (err) {
+            console.error("Error updating product:", err);
+            get().addNotification(
+                "error",
+                `Gagal memperbarui produk: ${err.response?.data?.message || err.message}`,
+            );
+            return null;
+        }
+    },
+
+    archiveProduct: async (id) => {
+        return get().updateProduct(id, { status: "ARCHIVED" });
+    },
+
     fetchOrderDetail: async (id) => {
         try {
             const res = await api.get(`/orders/${id}`);
-            set({ currentOrder: res.data.data });
-            return res.data.data;
+            const raw = res.data.data;
+
+            if (!raw) {
+                set({ currentOrder: null });
+                return null;
+            }
+
+            set({ currentOrder: raw });
+            return raw;
         } catch (err) {
             console.error("Error fetching order detail:", err);
+            set({ currentOrder: null });
             return null;
         }
     },
@@ -139,7 +360,7 @@ export const useStore = create((set, get) => ({
             // Update local state immediately
             set((state) => ({
                 products: state.products.map((p) =>
-                    p.id === id ? { ...p, stock } : p,
+                    p.id === id ? { ...p, stock: Number(stock) } : p,
                 ),
                 currentProduct:
                     state.currentProduct?.product?.id === id
@@ -147,7 +368,7 @@ export const useStore = create((set, get) => ({
                               ...state.currentProduct,
                               product: {
                                   ...state.currentProduct.product,
-                                  stock,
+                                  stock: Number(stock),
                               },
                           }
                         : state.currentProduct,
@@ -189,7 +410,7 @@ export const useStore = create((set, get) => ({
         try {
             const res = await api.post("/mappings", mappingData);
             set((state) => ({
-                mappings: [res.data.data, ...state.mappings],
+                mappings: [normalizeMapping(res.data.data), ...state.mappings],
             }));
             // Re-fetch unmapped and products to align
             get().fetchInitialData();
@@ -303,15 +524,19 @@ export const useStore = create((set, get) => ({
         socket.on("stock-updated", (data) => {
             set((state) => ({
                 products: state.products.map((p) =>
-                    p.sku === data.sku ? { ...p, stock: data.stock } : p,
+                    p.sku === data.sku || p.id === data.productId
+                        ? { ...p, stock: Number(data.stock) }
+                        : p,
                 ),
                 currentProduct:
-                    state.currentProduct?.product?.sku === data.sku
+                    state.currentProduct &&
+                    ((data.sku && state.currentProduct.product?.sku === data.sku) ||
+                     (data.productId && state.currentProduct.product?.id === data.productId))
                         ? {
                               ...state.currentProduct,
                               product: {
                                   ...state.currentProduct.product,
-                                  stock: data.stock,
+                                  stock: Number(data.stock),
                               },
                           }
                         : state.currentProduct,
@@ -324,9 +549,10 @@ export const useStore = create((set, get) => ({
 
         // Real-time new order
         socket.on("new-order", (data) => {
+            console.log(data);
             get().addNotification(
                 "success",
-                `🔔 Pesanan baru masuk dari ${data.marketplace}! Kode: ${data.order_code}`,
+                `Pesanan baru masuk dari ${data.marketplace}! Kode: ${data.order_id}`,
             );
         });
 
@@ -342,7 +568,7 @@ export const useStore = create((set, get) => ({
         socket.on("queue-updated", () => {
             // Re-fetch queues list to see new statuses
             api.get("/queues").then((res) => {
-                set({ queues: res.data.data });
+                set({ queues: Array.isArray(res.data?.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []) });
             });
         });
 

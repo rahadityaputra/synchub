@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useStore } from "../stores/useStore";
-import mockApi from "../lib/mockApi";
+import { useAuth } from "../stores/useAuth";
 import {
   LayoutDashboard,
   Package,
@@ -11,28 +11,28 @@ import {
   Code,
   Cpu,
   BarChart3,
-  MonitorPlay,
   Wifi,
   WifiOff,
   Bell,
-  Play,
   Menu,
   X,
 } from "lucide-react";
 
 function MainLayout() {
-  const { socketConnected, notifications, activityFeed, products } = useStore();
+  const { socketConnected, notifications } = useStore();
+  const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [simulatorOpen, setSimulatorOpen] = useState(false);
-
-  // Simulator State
-  const [simMarketplace, setSimMarketplace] = useState("shopee");
-  const [simProduct, setSimProduct] = useState("");
-  const [simQty, setSimQty] = useState(1);
-  const [simLoading, setSimLoading] = useState(false);
-  const [simResult, setSimResult] = useState(null);
 
   const location = useLocation();
+  const displayName = user?.name || user?.fullName || user?.email || "User";
+  const profileInitials =
+    displayName
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join("")
+      .slice(0, 2) || "U";
 
   const menuItems = [
     { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
@@ -47,169 +47,7 @@ function MainLayout() {
     { name: "Payload Logs", path: "/payload-logs", icon: Code },
     { name: "Queues", path: "/queues", icon: Cpu },
     { name: "Analytics", path: "/analytics", icon: BarChart3 },
-    { name: "Marketplaces", path: "/marketplaces", icon: MonitorPlay },
   ];
-
-  // Trigger simulation order
-  const handleSimulateOrder = async () => {
-    if (!simProduct) {
-      alert("Silakan pilih produk untuk simulasi!");
-      return;
-    }
-    setSimLoading(true);
-    setSimResult(null);
-    try {
-      // Login to mock API first
-      const loginRes = await mockApi.post("/auth/login", {
-        email: "test@example.com",
-        password: "password123",
-      });
-      const token = loginRes.data.data.token;
-
-      // Post order to mock API (this triggers webhook -> queue -> sync!)
-      const orderRes = await mockApi.post(
-        `/${simMarketplace.toLowerCase()}/orders`,
-        {
-          productId: simProduct,
-          quantity: simQty,
-          shippingAddress: {
-            name: "Budi Santoso",
-            street: "Jl. Pemuda No. 123",
-            city: "Surabaya",
-            postalCode: "60111",
-          },
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      setSimResult({
-        success: true,
-        message: `Order ${orderRes.data.data.order.marketplace_order_id} sukses dibuat!`,
-      });
-    } catch (err) {
-      console.error(err);
-      setSimResult({
-        success: false,
-        message: `Simulasi gagal: ${err.response?.data?.message || err.message}`,
-      });
-    } finally {
-      setSimLoading(false);
-    }
-  };
-
-  // Products available for selected simulated marketplace
-  const getSimMarketplaceProducts = () => {
-    // We hardcode native products matching mock-api database for seeding simplicity
-    if (simMarketplace === "shopee") {
-      return [
-        {
-          id: "SHP-ELEC-001-ID",
-          sku: "SHP-ELEC-001",
-          name: "Wireless Bluetooth Earbuds Pro (SHP-ELEC-001)",
-        },
-        {
-          id: "SHP-FASH-002-ID",
-          sku: "SHP-FASH-002",
-          name: "Slim Fit Cotton Polo Shirt (SHP-FASH-002)",
-        },
-        {
-          id: "SHP-HOME-003-ID",
-          sku: "SHP-HOME-003",
-          name: "Ceramic Non-Stick Frying Pan (SHP-HOME-003)",
-        },
-        {
-          id: "SHP-SPORT-004-ID",
-          sku: "SHP-SPORT-004",
-          name: "[UNMAPPED] Running Shoes Lightweight (SHP-SPORT-004)",
-        },
-        {
-          id: "SHP-BEAUTY-005-ID",
-          sku: "SHP-BEAUTY-005",
-          name: "[UNMAPPED] Vitamin C Serum 30ml (SHP-BEAUTY-005)",
-        },
-      ];
-    } else if (simMarketplace === "tokopedia") {
-      return [
-        {
-          id: "TOK-ELEC-001-ID",
-          sku: "TOK-ELEC-001",
-          name: "Mechanical Gaming Keyboard RGB (TOK-ELEC-001)",
-        },
-        {
-          id: "TOK-BOOK-005-ID",
-          sku: "TOK-BOOK-005",
-          name: "Clean Code Handbook (TOK-BOOK-005)",
-        },
-        {
-          id: "TOK-FOOD-003-ID",
-          sku: "TOK-FOOD-003",
-          name: "Premium Arabica Coffee Beans (TOK-FOOD-003)",
-        },
-        {
-          id: "TOK-FURN-002-ID",
-          sku: "TOK-FURN-002",
-          name: "[UNMAPPED] Ergonomic Office Chair (TOK-FURN-002)",
-        },
-        {
-          id: "TOK-AUTO-004-ID",
-          sku: "TOK-AUTO-004",
-          name: "[UNMAPPED] Car Dash Camera (TOK-AUTO-004)",
-        },
-      ];
-    } else {
-      return [
-        {
-          id: "LZD-ELEC-001-ID",
-          sku: "LZD-ELEC-001",
-          name: "Smart Watch Fitness AMOLED (LZD-ELEC-001)",
-        },
-        {
-          id: "LZD-HOME-003-ID",
-          sku: "LZD-HOME-003",
-          name: "Robot Vacuum Cleaner LiDAR (LZD-HOME-003)",
-        },
-        {
-          id: "LZD-FASH-002-ID",
-          sku: "LZD-FASH-002",
-          name: "Genuine Leather Wallet RFID (LZD-FASH-002)",
-        },
-        {
-          id: "LZD-BABY-004-ID",
-          sku: "LZD-BABY-004",
-          name: "[UNMAPPED] Baby Stroller Lightweight (LZD-BABY-004)",
-        },
-        {
-          id: "LZD-ELEC-006-ID",
-          sku: "LZD-ELEC-006",
-          name: "[UNMAPPED] USB-C Hub 10-in-1 (LZD-ELEC-006)",
-        },
-      ];
-    }
-  };
-
-  // Helper to trigger mock products to load native product IDs
-  // Since the mock product IDs are uuid-v4 generated at runtime on startup,
-  // we fetch the actual product lists from the mock server dynamically so we don't send incorrect/unknown IDs!
-  const [mockProducts, setMockProducts] = useState([]);
-  React.useEffect(() => {
-    if (simulatorOpen) {
-      mockApi
-        .get(`/${simMarketplace.toLowerCase()}/products`)
-        .then((res) => {
-          const list = res.data.data.products || res.data.data || [];
-          setMockProducts(list);
-          if (list.length > 0)
-            setSimProduct(list[0].item_id || list[0].product_id || list[0].id);
-        })
-        .catch((err) =>
-          console.error("Gagal mengambil produk mock untuk simulator", err),
-        );
-    }
-  }, [simMarketplace, simulatorOpen]);
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-950 text-slate-100">
@@ -269,17 +107,6 @@ function MainLayout() {
             );
           })}
         </nav>
-
-        {/* Simulator Button */}
-        <div className="p-3 border-t border-slate-800">
-          <button
-            onClick={() => setSimulatorOpen(true)}
-            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold py-2 px-3 rounded-lg shadow-lg shadow-emerald-900/20 transition-all"
-          >
-            <Play size={14} />
-            {sidebarOpen ? "ORDER SIMULATOR" : "SIM"}
-          </button>
-        </div>
       </aside>
 
       {/* 2. MAIN CONTENT AREA */}
@@ -324,10 +151,10 @@ function MainLayout() {
             {/* Profile */}
             <div className="flex items-center gap-3 pl-3 border-l border-slate-800">
               <div className="h-8 w-8 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center text-sm font-bold text-white uppercase">
-                AD
+                {profileInitials}
               </div>
               <span className="text-sm font-medium text-slate-300 hidden md:block">
-                Admin CTO
+                {displayName}
               </span>
             </div>
           </div>
@@ -339,143 +166,7 @@ function MainLayout() {
         </main>
       </div>
 
-      {/* 3. SIMULATOR MODAL PANEL */}
-      {simulatorOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800 bg-slate-950">
-              <div className="flex items-center gap-2">
-                <Play size={18} className="text-emerald-400" />
-                <span className="font-bold text-white text-base">
-                  E-Commerce Webhook Simulator
-                </span>
-              </div>
-              <button
-                onClick={() => {
-                  setSimulatorOpen(false);
-                  setSimResult(null);
-                }}
-                className="p-1 rounded-md text-slate-400 hover:bg-slate-800 hover:text-white"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="p-5 space-y-4">
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Gunakan panel ini untuk mensimulasikan pembelian langsung di
-                marketplace. Mock API akan membuat transaksi baru, memicu
-                webhook, dan mengirimkan payload order ke aggregator.
-              </p>
-
-              {/* Marketplace Select */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-400 uppercase">
-                  Pilih Marketplace
-                </label>
-                <select
-                  value={simMarketplace}
-                  onChange={(e) => setSimMarketplace(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg py-2 px-3 text-sm focus:border-blue-500 focus:outline-none"
-                >
-                  <option value="shopee">Shopee</option>
-                  <option value="tokopedia">Tokopedia</option>
-                  <option value="lazada">Lazada</option>
-                </select>
-              </div>
-
-              {/* Product Select */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-400 uppercase">
-                  Pilih Produk
-                </label>
-                <select
-                  value={simProduct}
-                  onChange={(e) => setSimProduct(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg py-2 px-3 text-sm focus:border-blue-500 focus:outline-none"
-                >
-                  {mockProducts.length === 0 ? (
-                    <option value="">
-                      Mengambil data dari marketplace mock...
-                    </option>
-                  ) : (
-                    mockProducts.map((p) => {
-                      const id = p.item_id || p.product_id || p.id;
-                      const sku = p.model_sku || p.sku || p.seller_sku;
-                      const name = p.item_name || p.name;
-                      return (
-                        <option key={id} value={id}>
-                          {name} ({sku}) - Stock:{" "}
-                          {p.stock !== undefined ? p.stock : p.available}
-                        </option>
-                      );
-                    })
-                  )}
-                </select>
-              </div>
-
-              {/* Quantity Input */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-400 uppercase">
-                  Kuantitas Pembelian
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="100"
-                  value={simQty}
-                  onChange={(e) => setSimQty(parseInt(e.target.value, 10))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg py-2 px-3 text-sm focus:border-blue-500 focus:outline-none"
-                />
-              </div>
-
-              {/* Submit simulation */}
-              <button
-                onClick={handleSimulateOrder}
-                disabled={simLoading || !simProduct}
-                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-2.5 px-4 rounded-lg shadow-lg text-sm transition-all flex items-center justify-center gap-2"
-              >
-                {simLoading ? (
-                  <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                ) : (
-                  <Play size={16} />
-                )}
-                Kirim Transaksi Pembelian
-              </button>
-
-              {/* Result display */}
-              {simResult && (
-                <div
-                  className={`p-3 rounded-lg text-xs flex gap-2 items-start border ${
-                    simResult.success
-                      ? "bg-emerald-950/20 border-emerald-500/20 text-emerald-400"
-                      : "bg-red-950/20 border-red-500/20 text-red-400"
-                  }`}
-                >
-                  <span>{simResult.success ? "✅" : "❌"}</span>
-                  <div className="flex-1 leading-normal font-medium">
-                    {simResult.message}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="px-5 py-3 border-t border-slate-800 bg-slate-950 flex justify-end">
-              <button
-                onClick={() => {
-                  setSimulatorOpen(false);
-                  setSimResult(null);
-                }}
-                className="text-xs font-bold text-slate-400 hover:text-white px-4 py-2"
-              >
-                Tutup
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 4. REAL-TIME TOAST NOTIFICATION STACK */}
+      {/* 3. REAL-TIME TOAST NOTIFICATION STACK */}
       <div className="fixed bottom-5 right-5 space-y-2 z-50 w-full max-w-sm pointer-events-none">
         {notifications.map((toast) => (
           <div

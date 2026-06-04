@@ -44,7 +44,7 @@ function PayloadLogs() {
                   </span>
                   <span className="text-slate-500 flex items-center gap-1">
                     <Calendar size={10} />
-                    {new Date(log.timestamp).toLocaleTimeString()}
+                    {new Date(log.timestamp || log.createdAt || log.created_at).toLocaleTimeString('id-ID')}
                   </span>
                 </div>
                 
@@ -103,7 +103,7 @@ function PayloadLogs() {
                 </div>
                 <div>
                   <span className="text-slate-500 mr-2">Waktu Diterima:</span>
-                  <span className="font-bold text-white font-mono">{new Date(selectedPayload.timestamp).toLocaleString()}</span>
+                  <span className="font-bold text-white font-mono">{new Date(selectedPayload.timestamp || selectedPayload.createdAt || selectedPayload.created_at).toLocaleString('id-ID')}</span>
                 </div>
               </div>
 

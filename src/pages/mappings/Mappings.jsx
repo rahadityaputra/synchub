@@ -13,6 +13,14 @@ function Mappings() {
   const [internalSku, setInternalSku] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  const formatDate = (value) =>
+    value
+      ? new Date(value).toLocaleString("id-ID", {
+          dateStyle: "medium",
+          timeStyle: "short",
+        })
+      : "-";
+
   const handleOpenCreate = () => {
     setMarketplace("shopee");
     setMarketplaceSku("");
@@ -94,7 +102,11 @@ function Mappings() {
                 <th className="px-6 py-4">Marketplace</th>
                 <th className="px-6 py-4">Marketplace SKU</th>
                 <th className="px-6 py-4">Internal SKU (Gudang)</th>
+                <th className="px-6 py-4">Product ID</th>
+                <th className="px-6 py-4">Marketplace Product ID</th>
                 <th className="px-6 py-4">Nama Produk Gudang</th>
+                <th className="px-6 py-4">Created At</th>
+                <th className="px-6 py-4">Updated At</th>
                 <th className="px-6 py-4 text-center">Status</th>
                 <th className="px-6 py-4 text-right">Action</th>
               </tr>
@@ -103,7 +115,7 @@ function Mappings() {
               {mappings.length === 0 ? (
                 <tr>
                   <td
-                    colSpan="6"
+                    colSpan="10"
                     className="text-center py-10 text-slate-500 font-medium"
                   >
                     Tidak ada SKU mapping ditemukan. Klik "Tambah Mappings"
@@ -113,7 +125,7 @@ function Mappings() {
               ) : (
                 mappings.map((m) => {
                   const linkedProduct = products.find(
-                    (p) => p.sku === m.internal_sku,
+                    (p) => p.sku === m.internalSku,
                   );
                   return (
                     <tr
@@ -124,13 +136,25 @@ function Mappings() {
                         {m.marketplace}
                       </td>
                       <td className="px-6 py-4 font-mono font-bold text-white">
-                        {m.marketplace_sku}
+                        {m.marketplaceSku}
                       </td>
                       <td className="px-6 py-4 font-mono font-bold text-blue-400">
-                        {m.internal_sku}
+                        {m.internalSku}
+                      </td>
+                      <td className="px-6 py-4 font-mono text-slate-300">
+                        {m.productId ?? "-"}
+                      </td>
+                      <td className="px-6 py-4 font-mono text-slate-300">
+                        {m.marketplaceProductId ?? "-"}
                       </td>
                       <td className="px-6 py-4 text-slate-300 font-medium">
                         {linkedProduct ? linkedProduct.name : "Unknown Product"}
+                      </td>
+                      <td className="px-6 py-4 text-slate-400 whitespace-nowrap">
+                        {formatDate(m.createdAt)}
+                      </td>
+                      <td className="px-6 py-4 text-slate-400 whitespace-nowrap">
+                        {formatDate(m.updatedAt)}
                       </td>
                       <td className="px-6 py-4 text-center">
                         <span className="bg-emerald-500/10 text-emerald-400 text-[10px] px-2 py-0.5 rounded border border-emerald-500/20 font-bold">
