@@ -14,5 +14,5 @@ node_modules/
 # Map files tidak diperlukan
 *.js.map
 
-# Folder dist tidak perlu dikirim ke source (Cloud Build akan generate ulang)
-dist/
+# dist/ tidak diignore karena Cloud Build generate dist/ terlebih dahulu,
+# lalu gcloud app deploy perlu meng-upload dist/ agar App Engine bisa melayani static files.
