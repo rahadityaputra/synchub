@@ -1,11 +1,18 @@
+# Jangan kirim ke Cloud Build / App Engine
 node_modules/
 .git/
 .github/
 .vscode/
 .idea/
 *.log
+
+# .env tidak perlu dikirim — nilai diambil dari Secret Manager saat build
 .env
-*.md
-src/
-public/
+.env.local
+.env.*.local
+
+# Map files tidak diperlukan
 *.js.map
+
+# Folder dist tidak perlu dikirim ke source (Cloud Build akan generate ulang)
+dist/

@@ -1,0 +1,33 @@
+steps:
+  # Step 1: Install dependencies
+  - name: 'node:20'
+    entrypoint: 'npm'
+    args: ['install']
+
+  # Step 2: Fetch secrets dari Secret Manager, lalu buat file .env untuk build
+  # Secrets di-fetch saat build time karena frontend adalah static site (nilai VITE_*
+  # akan di-embed ke dalam JS bundle oleh Vite saat 'npm run build')
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "VITE_API_BASE_URL=$(gcloud secrets versions access latest --secret=VITE_API_BASE_URL)" > .env
+        echo "VITE_SOCKET_URL=$(gcloud secrets versions access latest --secret=VITE_SOCKET_URL)" >> .env
+
+  # Step 3: Build frontend (Vite akan embed nilai .env ke dalam bundle)
+  - name: 'node:20'
+    entrypoint: 'npm'
+    args: ['run', 'build']
+
+  # Step 4: Deploy static build hasil ke App Engine
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'app'
+      - 'deploy'
+      - 'app.yaml'
+      - '--quiet'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
