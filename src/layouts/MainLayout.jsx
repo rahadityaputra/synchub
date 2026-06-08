@@ -4,6 +4,8 @@ import { useStore } from "../stores/useStore";
 import { useAuth } from "../stores/useAuth";
 import {
   LayoutDashboard,
+  LogOut,
+  User as UserIcon,
   Package,
   Link2,
   ShoppingCart,
@@ -20,8 +22,9 @@ import {
 
 function MainLayout() {
   const { socketConnected, notifications } = useStore();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   const location = useLocation();
   const displayName = user?.name || user?.fullName || user?.email || "User";
@@ -149,13 +152,60 @@ function MainLayout() {
             </div>
 
             {/* Profile */}
-            <div className="flex items-center gap-3 pl-3 border-l border-slate-800">
-              <div className="h-8 w-8 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center text-sm font-bold text-white uppercase">
-                {profileInitials}
-              </div>
-              <span className="text-sm font-medium text-slate-300 hidden md:block">
-                {displayName}
-              </span>
+            <div className="relative border-l border-slate-800 pl-3">
+              <button
+                onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                className="flex items-center gap-3 hover:opacity-80 transition-opacity focus:outline-none"
+              >
+                <div className="h-8 w-8 rounded-full bg-blue-600 border border-blue-500 shadow-sm flex items-center justify-center text-sm font-bold text-white uppercase shrink-0">
+                  {profileInitials}
+                </div>
+                <span className="text-sm font-medium text-slate-300 hidden md:block">
+                  {displayName}
+                </span>
+              </button>
+
+              {/* Dropdown Menu */}
+              {profileMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setProfileMenuOpen(false)}
+                  ></div>
+                  <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="px-4 py-3 border-b border-slate-700">
+                      <p className="text-sm text-white font-medium truncate">
+                        {displayName}
+                      </p>
+                      <p className="text-xs text-slate-400 truncate mt-0.5">
+                        {user?.email || "No email"}
+                      </p>
+                    </div>
+                    <div className="p-1">
+                      <Link
+                        to="/profile"
+                        onClick={() => setProfileMenuOpen(false)}
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+                      >
+                        <UserIcon size={16} className="text-slate-400" />
+                        My Profile
+                      </Link>
+                    </div>
+                    <div className="p-1 border-t border-slate-700">
+                      <button
+                        onClick={() => {
+                          setProfileMenuOpen(false);
+                          logout();
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors text-left"
+                      >
+                        <LogOut size={16} />
+                        Sign out
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </header>

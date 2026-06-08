@@ -24,9 +24,9 @@ import SyncLogs from "./pages/sync-logs/SyncLogs";
 import PayloadLogs from "./pages/payload-logs/PayloadLogs";
 import Queues from "./pages/queues/Queues";
 import Analytics from "./pages/analytics/Analytics";
-import Marketplaces from "./pages/marketplaces/Marketplaces";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
+import Profile from "./pages/profile/Profile";
 
 function App() {
   const { initSocket, disconnectSocket, fetchInitialData } = useStore();
@@ -78,6 +78,7 @@ function App() {
           <Route path="payload-logs" element={<PayloadLogs />} />
           <Route path="queues" element={<Queues />} />
           <Route path="analytics" element={<Analytics />} />
+          <Route path="profile" element={<Profile />} />
           {/* <Route path="marketplaces" element={<Marketplaces />} /> */}
         </Route>
       </Routes>
