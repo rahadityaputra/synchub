@@ -522,37 +522,64 @@ export const useStore = create((set, get) => ({
 
         // Real-time stock update
         socket.on("stock-updated", (data) => {
+            // Normalize field names — backend may use snake_case or camelCase
+            const sku =
+                data.sku ||
+                data.marketplace_sku ||
+                data.marketplaceSku ||
+                data.internalSku ||
+                data.internal_sku ||
+                "–";
+            const productId = data.productId || data.product_id || null;
+            const newStock = data.stock ?? data.newStock ?? data.quantity;
+            const marketplace = data.marketplace || data.marketplaceName || null;
+
             set((state) => ({
                 products: state.products.map((p) =>
-                    p.sku === data.sku || p.id === data.productId
-                        ? { ...p, stock: Number(data.stock) }
+                    p.sku === sku || p.id === productId
+                        ? { ...p, stock: Number(newStock) }
                         : p,
                 ),
                 currentProduct:
                     state.currentProduct &&
-                    ((data.sku && state.currentProduct.product?.sku === data.sku) ||
-                     (data.productId && state.currentProduct.product?.id === data.productId))
+                    ((sku && sku !== "–" && state.currentProduct.product?.sku === sku) ||
+                     (productId && state.currentProduct.product?.id === productId))
                         ? {
                               ...state.currentProduct,
                               product: {
                                   ...state.currentProduct.product,
-                                  stock: Number(data.stock),
+                                  stock: Number(newStock),
                               },
                           }
                         : state.currentProduct,
             }));
+
+            const toLabel = marketplace
+                ? `marketplace ${marketplace}`
+                : `semua marketplace`;
             get().addNotification(
                 "info",
-                `📦 Stok SKU ${data.sku} disinkronkan ke: ${data.stock}`,
+                `📦 Stok SKU ${sku} diperbarui menjadi ${newStock ?? "–"} (${toLabel})`,
             );
         });
 
         // Real-time new order
         socket.on("new-order", (data) => {
-            console.log(data);
+            console.log("[SOCKET] new-order:", data);
+            // Backend may use snake_case or camelCase for order ID
+            const orderId =
+                data.order_id ||
+                data.orderId ||
+                data.id ||
+                "–";
+            const marketplace =
+                data.marketplace ||
+                data.marketplaceName ||
+                data.source ||
+                "marketplace";
             get().addNotification(
                 "success",
-                `Pesanan baru masuk dari ${data.marketplace}! Kode: ${data.order_id}`,
+                `🛒 Pesanan baru masuk dari ${marketplace}! Kode: ${orderId}`,
             );
         });
 
