@@ -522,6 +522,13 @@ export const useStore = create((set, get) => ({
 
         // Real-time stock update
         socket.on("stock-updated", (data) => {
+            console.log("[SOCKET] stock-updated payload:", data);
+            
+            const productId = data.productId || data.product_id || data.id || null;
+            
+            // Try to find the product in local state as fallback
+            const localProduct = get().products.find(p => p.id === productId) || {};
+
             // Normalize field names — backend may use snake_case or camelCase
             const sku =
                 data.sku ||
@@ -529,9 +536,11 @@ export const useStore = create((set, get) => ({
                 data.marketplaceSku ||
                 data.internalSku ||
                 data.internal_sku ||
+                localProduct.sku ||
+                localProduct.internalSku ||
                 "–";
-            const productId = data.productId || data.product_id || null;
-            const newStock = data.stock ?? data.newStock ?? data.quantity;
+                
+            const newStock = data.stock ?? data.newStock ?? data.updatedStock ?? data.quantity ?? localProduct.stock;
             const marketplace = data.marketplace || data.marketplaceName || null;
 
             set((state) => ({
